@@ -1,0 +1,59 @@
+# Gradle
+.gradle/
+build/
+**/build/
+!src/**/build/
+gradle-app.setting
+.gradletasknamecache
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Kotlin/Native & KMP
+.kotlin/
+**/.kotlin/
+kotlin-js-store/
+
+# iOS
+iosApp/.build/
+iosApp/Pods/
+iosApp/*.xcworkspace/
+iosApp/xcuserdata/
+*.xcuserstate
+*.xcbkptlist
+DerivedData/
+xcuserdata
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/project.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata
+**/xcshareddata/WorkspaceSettings.xcsettings
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# SQLDelight – nur generierte Klassen ignorieren, .sq Dateien committen
+**/sqldelight/
+# Ausnahme: die eigentlichen .sq Schema-Dateien SOLLEN committed werden
+!**/commonMain/sqldelight/
+
+# Keystore / Secrets
+*.jks
+*.keystore
+keystore.properties
+google-services.json
+
+node_modules/

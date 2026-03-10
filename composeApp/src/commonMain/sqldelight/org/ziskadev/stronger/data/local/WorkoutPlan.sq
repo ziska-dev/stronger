@@ -1,0 +1,89 @@
+CREATE TABLE IF NOT EXISTS WorkoutPlan (
+    id                           INTEGER PRIMARY KEY AUTOINCREMENT,
+    name                         TEXT    NOT NULL,
+    description                  TEXT,
+    workoutType                  TEXT    NOT NULL DEFAULT 'STRENGTH',
+    rounds                       INTEGER,
+    pauseBetweenRoundsSeconds    INTEGER,
+    pauseBetweenSetsSeconds      INTEGER,
+    pauseBetweenExercisesSeconds INTEGER,
+    createdAt                    INTEGER NOT NULL,
+    updatedAt                    INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS WorkoutPlanExercise (
+    id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+    planId                    INTEGER NOT NULL REFERENCES WorkoutPlan(id) ON DELETE CASCADE,
+    exerciseId                TEXT    NOT NULL REFERENCES Exercise(id),
+    position                  INTEGER NOT NULL,
+    sets                      INTEGER,
+    pauseAfterSetSeconds      INTEGER,
+    pauseAfterExerciseSeconds INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_plan_exercise_planId
+    ON WorkoutPlanExercise(planId, position);
+
+-- ── Queries ──────────────────────────────────────────────────────────────────
+
+getAllPlans:
+SELECT * FROM WorkoutPlan ORDER BY updatedAt DESC;
+
+getPlanById:
+SELECT * FROM WorkoutPlan WHERE id = :id;
+
+getExercisesForPlan:
+SELECT wpe.*, e.nameEn, e.nameDe, e.thumbnailUrl, e.videoUrl, e.exerciseType
+FROM WorkoutPlanExercise wpe
+INNER JOIN Exercise e ON wpe.exerciseId = e.id
+WHERE wpe.planId = :planId
+ORDER BY wpe.position ASC;
+
+insertPlan:
+INSERT INTO WorkoutPlan
+    (name, description, workoutType, rounds, pauseBetweenRoundsSeconds,
+     pauseBetweenSetsSeconds, pauseBetweenExercisesSeconds, createdAt, updatedAt)
+VALUES
+    (:name, :description, :workoutType, :rounds, :pauseBetweenRoundsSeconds,
+     :pauseBetweenSetsSeconds, :pauseBetweenExercisesSeconds, :createdAt, :updatedAt);
+
+updatePlan:
+UPDATE WorkoutPlan
+SET name                         = :name,
+    description                  = :description,
+    workoutType                  = :workoutType,
+    rounds                       = :rounds,
+    pauseBetweenRoundsSeconds    = :pauseBetweenRoundsSeconds,
+    pauseBetweenSetsSeconds      = :pauseBetweenSetsSeconds,
+    pauseBetweenExercisesSeconds = :pauseBetweenExercisesSeconds,
+    updatedAt                    = :updatedAt
+WHERE id = :id;
+
+deletePlan:
+DELETE FROM WorkoutPlan WHERE id = :id;
+
+insertPlanExercise:
+INSERT INTO WorkoutPlanExercise
+    (planId, exerciseId, position, sets, pauseAfterSetSeconds, pauseAfterExerciseSeconds)
+VALUES
+    (:planId, :exerciseId, :position, :sets, :pauseAfterSetSeconds, :pauseAfterExerciseSeconds);
+
+updatePlanExercise:
+UPDATE WorkoutPlanExercise
+SET position                  = :position,
+    sets                      = :sets,
+    pauseAfterSetSeconds      = :pauseAfterSetSeconds,
+    pauseAfterExerciseSeconds = :pauseAfterExerciseSeconds
+WHERE id = :id;
+
+updatePlanExercisePosition:
+UPDATE WorkoutPlanExercise SET position = :position WHERE id = :id;
+
+deletePlanExercise:
+DELETE FROM WorkoutPlanExercise WHERE id = :id;
+
+deleteAllExercisesForPlan:
+DELETE FROM WorkoutPlanExercise WHERE planId = :planId;
+
+lastInsertRowId:
+SELECT last_insert_rowid();

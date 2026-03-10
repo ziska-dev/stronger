@@ -1,0 +1,35 @@
+CREATE TABLE IF NOT EXISTS AppSettings (
+    id                                  INTEGER PRIMARY KEY DEFAULT 1,
+    weightUnit                          TEXT NOT NULL DEFAULT 'KG',
+    language                            TEXT NOT NULL DEFAULT 'EN',
+    defaultPauseBetweenSetsSeconds      INTEGER NOT NULL DEFAULT 60,
+    defaultPauseBetweenExercisesSeconds INTEGER NOT NULL DEFAULT 15,
+    defaultPauseBetweenRoundsSeconds    INTEGER NOT NULL DEFAULT 45,
+    autoStartTimers                     INTEGER NOT NULL DEFAULT 0,
+    autoAdvanceExercises                INTEGER NOT NULL DEFAULT 0
+);
+
+-- Singleton-Row sicherstellen
+INSERT OR IGNORE INTO AppSettings (id) VALUES (1);
+
+getSettings:
+SELECT * FROM AppSettings WHERE id = 1;
+
+updateWeightUnit:
+UPDATE AppSettings SET weightUnit = :weightUnit WHERE id = 1;
+
+updateLanguage:
+UPDATE AppSettings SET language = :language WHERE id = 1;
+
+updateDefaultPauses:
+UPDATE AppSettings
+SET defaultPauseBetweenSetsSeconds      = :sets,
+    defaultPauseBetweenExercisesSeconds = :exercises,
+    defaultPauseBetweenRoundsSeconds    = :rounds
+WHERE id = 1;
+
+updateAutoStartTimers:
+UPDATE AppSettings SET autoStartTimers = :enabled WHERE id = 1;
+
+updateAutoAdvanceExercises:
+UPDATE AppSettings SET autoAdvanceExercises = :enabled WHERE id = 1;

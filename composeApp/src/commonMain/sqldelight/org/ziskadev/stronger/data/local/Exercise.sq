@@ -1,0 +1,114 @@
+CREATE TABLE IF NOT EXISTS Exercise (
+    id            TEXT PRIMARY KEY,
+    nameFr        TEXT,   -- aus App-Asset JSON
+    nameEn        TEXT,
+    nameDe        TEXT,   -- Primary (von API)
+    descriptionFr TEXT,
+    descriptionEn TEXT,
+    descriptionDe TEXT,   -- Primary (von API)
+    videoUrl      TEXT,
+    thumbnailUrl  TEXT,
+    exerciseType  TEXT,
+    isCustom      INTEGER NOT NULL DEFAULT 0,
+    cachedAt      INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ExerciseMuscle (
+    exerciseId TEXT    NOT NULL REFERENCES Exercise(id) ON DELETE CASCADE,
+    muscle     TEXT    NOT NULL,
+    isPrimary  INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ExerciseEquipment (
+    exerciseId TEXT NOT NULL REFERENCES Exercise(id) ON DELETE CASCADE,
+    equipment  TEXT NOT NULL
+);
+
+-- Indices für häufige Filter-Queries
+CREATE INDEX IF NOT EXISTS idx_exercise_muscle_exerciseId
+    ON ExerciseMuscle(exerciseId);
+
+CREATE INDEX IF NOT EXISTS idx_exercise_muscle_muscle
+    ON ExerciseMuscle(muscle, isPrimary);
+
+CREATE INDEX IF NOT EXISTS idx_exercise_equipment_exerciseId
+    ON ExerciseEquipment(exerciseId);
+
+CREATE INDEX IF NOT EXISTS idx_exercise_equipment_equipment
+    ON ExerciseEquipment(equipment);
+
+-- ── Queries ──────────────────────────────────────────────────────────────────
+
+countExercises:
+SELECT COUNT(*) FROM Exercise;
+
+getOldestCachedAt:
+SELECT MIN(cachedAt) FROM Exercise WHERE isCustom = 0;
+
+getAllExercises:
+SELECT * FROM Exercise ORDER BY nameEn ASC;
+
+getExerciseById:
+SELECT * FROM Exercise WHERE id = :id;
+
+getMusclesForExercise:
+SELECT * FROM ExerciseMuscle WHERE exerciseId = :exerciseId;
+
+getEquipmentForExercise:
+SELECT * FROM ExerciseEquipment WHERE exerciseId = :exerciseId;
+
+searchExercises:
+SELECT DISTINCT e.* FROM Exercise e
+WHERE (
+    :query = '' OR
+    LOWER(e.nameEn) LIKE '%' || LOWER(:query) || '%' OR
+    LOWER(COALESCE(e.nameDe, '')) LIKE '%' || LOWER(:query) || '%'
+)
+ORDER BY e.nameEn ASC;
+
+getExercisesByMuscle:
+SELECT DISTINCT e.* FROM Exercise e
+INNER JOIN ExerciseMuscle em ON e.id = em.exerciseId
+WHERE em.muscle = :muscle
+ORDER BY e.nameEn ASC;
+
+getExercisesByEquipment:
+SELECT DISTINCT e.* FROM Exercise e
+INNER JOIN ExerciseEquipment eq ON e.id = eq.exerciseId
+WHERE eq.equipment = :equipment
+ORDER BY e.nameEn ASC;
+
+getExercisesByMuscleAndEquipment:
+SELECT DISTINCT e.* FROM Exercise e
+INNER JOIN ExerciseMuscle em ON e.id = em.exerciseId
+INNER JOIN ExerciseEquipment eq ON e.id = eq.exerciseId
+WHERE em.muscle = :muscle AND eq.equipment = :equipment
+ORDER BY e.nameEn ASC;
+
+upsertExercise:
+INSERT OR REPLACE INTO Exercise
+    (id, nameEn, nameDe, descriptionEn, descriptionDe,
+     videoUrl, thumbnailUrl, exerciseType, isCustom, cachedAt)
+VALUES
+    (:id, :nameEn, :nameDe, :descriptionEn, :descriptionDe,
+     :videoUrl, :thumbnailUrl, :exerciseType, :isCustom, :cachedAt);
+
+insertMuscle:
+INSERT OR IGNORE INTO ExerciseMuscle (exerciseId, muscle, isPrimary)
+VALUES (:exerciseId, :muscle, :isPrimary);
+
+insertEquipment:
+INSERT OR IGNORE INTO ExerciseEquipment (exerciseId, equipment)
+VALUES (:exerciseId, :equipment);
+
+deleteMusclesForExercise:
+DELETE FROM ExerciseMuscle WHERE exerciseId = :exerciseId;
+
+deleteEquipmentForExercise:
+DELETE FROM ExerciseEquipment WHERE exerciseId = :exerciseId;
+
+deleteExercise:
+DELETE FROM Exercise WHERE id = :id;
+
+deleteAllCachedExercises:
+DELETE FROM Exercise WHERE isCustom = 0;
