@@ -10,6 +10,7 @@ import io.ktor.client.plugins.logging.Logging
 import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 import org.koin.dsl.module
+import org.ziskadev.stronger.data.remote.ExerciseApiService
 
 val networkModule = module {
     single {
@@ -21,7 +22,7 @@ val networkModule = module {
                 })
             }
             install(Logging) {
-                level = LogLevel.BODY
+                level = LogLevel.ALL
                 logger = object : Logger {
                     override fun log(message: String) {
                         Napier.d(message, tag = "Ktor")
@@ -29,5 +30,11 @@ val networkModule = module {
                 }
             }
         }
+    }
+    single {
+        ExerciseApiService(
+            httpClient = get(),
+            baseUrl = "http://10.0.2.2:3000",
+        )
     }
 }
