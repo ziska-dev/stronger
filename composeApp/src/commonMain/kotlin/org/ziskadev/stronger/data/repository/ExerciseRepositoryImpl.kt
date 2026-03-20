@@ -2,7 +2,6 @@ package org.ziskadev.stronger.data.repository
 
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.onStart
 import org.ziskadev.stronger.data.local.ExerciseLocalDataSource
 import org.ziskadev.stronger.data.remote.ExerciseApiService
 import org.ziskadev.stronger.data.remote.dto.ExerciseDto
