@@ -115,3 +115,12 @@ DELETE FROM Exercise WHERE id = :id;
 
 deleteAllCachedExercises:
 DELETE FROM Exercise WHERE isCustom = 0;
+
+softDeleteExercise:
+UPDATE Exercise SET isDeleted = 1 WHERE id = :id;
+
+toggleFavorite:
+UPDATE Exercise SET isFavorite = :isFavorite WHERE id = :id;
+
+getFavoriteExercises:
+SELECT * FROM Exercise WHERE isFavorite = 1 AND isDeleted = 0 ORDER BY nameEn ASC;

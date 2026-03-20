@@ -25,4 +25,13 @@ interface ExerciseRepository {
 
     /** Returns true if no exercises are cached locally. */
     suspend fun isDatabaseEmpty(): Boolean
+
+    /** Soft-deletes an exercise — hidden from all lists but retained for session history. */
+    suspend fun softDeleteExercise(exerciseId: String)
+
+    /** Emits all favorited exercises, ordered by English name. */
+    fun getFavoriteExercises(): Flow<List<Exercise>>
+
+    /** Toggles the favorite status of an exercise. */
+    suspend fun toggleFavorite(exerciseId: String, isFavorite: Boolean)
 }

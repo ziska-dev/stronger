@@ -58,6 +58,26 @@ class ExerciseLocalDataSource(private val db: StrongerDatabase) {
             .mapToList(Dispatchers.IO)
             .map { rows -> rows.map { it.toDomain() } }
 
+    suspend fun softDeleteExercise(exerciseId: String): Unit =
+        withContext(Dispatchers.IO) {
+            db.exerciseQueries.softDeleteExercise(exerciseId)
+        }
+
+    fun getFavoriteExercises(): Flow<List<Exercise>> =
+        db.exerciseQueries
+            .getFavoriteExercises()
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+            .map { rows -> rows.map { it.toDomain() } }
+
+    suspend fun toggleFavorite(exerciseId: String, isFavorite: Boolean): Unit =
+        withContext(Dispatchers.IO) {
+            db.exerciseQueries.toggleFavorite(
+                id = exerciseId,
+                isFavorite = if (isFavorite) 1L else 0L,
+            )
+        }
+
     suspend fun getExerciseCountOnce(): Long =
         withContext(Dispatchers.IO) {
             db.exerciseQueries.countExercises().executeAsOne()

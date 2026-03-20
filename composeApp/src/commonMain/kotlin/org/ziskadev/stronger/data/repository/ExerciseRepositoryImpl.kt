@@ -30,6 +30,15 @@ class ExerciseRepositoryImpl(
     override suspend fun isDatabaseEmpty(): Boolean =
         localDataSource.getExerciseCountOnce() == 0L
 
+    override suspend fun softDeleteExercise(exerciseId: String) =
+        localDataSource.softDeleteExercise(exerciseId)
+
+    override fun getFavoriteExercises(): Flow<List<Exercise>> =
+        localDataSource.getFavoriteExercises()
+
+    override suspend fun toggleFavorite(exerciseId: String, isFavorite: Boolean) =
+        localDataSource.toggleFavorite(exerciseId, isFavorite)
+
     override fun searchExercises(
         query: String,
         muscle: String?,
