@@ -7,7 +7,7 @@ data class WorkoutPlan(
     val id: Long,
     val name: String,
     val description: String?,
-    val workoutType: String,
+    val workoutType: WorkoutType,
     val rounds: Int?,
     val pauseBetweenRoundsSeconds: Int?,
     val pauseBetweenSetsSeconds: Int?,

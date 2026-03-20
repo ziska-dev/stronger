@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.ziskadev.stronger.domain.model.WorkoutPlan
 import org.ziskadev.stronger.domain.model.WorkoutPlanExercise
+import org.ziskadev.stronger.domain.model.WorkoutType
 import org.ziskadev.stronger.data.local.WorkoutPlan as WorkoutPlanEntity
 
 /**
@@ -38,7 +39,7 @@ class WorkoutPlanLocalDataSource(private val db: StrongerDatabase) {
                 db.workoutPlanQueries.insertPlan(
                     name = plan.name,
                     description = plan.description,
-                    workoutType = plan.workoutType,
+                    workoutType = plan.workoutType.dbValue,
                     rounds = plan.rounds?.toLong(),
                     pauseBetweenRoundsSeconds = plan.pauseBetweenRoundsSeconds?.toLong(),
                     pauseBetweenSetsSeconds = plan.pauseBetweenSetsSeconds?.toLong(),
@@ -56,7 +57,7 @@ class WorkoutPlanLocalDataSource(private val db: StrongerDatabase) {
                 id = plan.id,
                 name = plan.name,
                 description = plan.description,
-                workoutType = plan.workoutType,
+                workoutType = plan.workoutType.dbValue,
                 rounds = plan.rounds?.toLong(),
                 pauseBetweenRoundsSeconds = plan.pauseBetweenRoundsSeconds?.toLong(),
                 pauseBetweenSetsSeconds = plan.pauseBetweenSetsSeconds?.toLong(),
@@ -119,7 +120,7 @@ class WorkoutPlanLocalDataSource(private val db: StrongerDatabase) {
         id = id,
         name = name,
         description = description,
-        workoutType = workoutType,
+        workoutType = WorkoutType.fromDb(workoutType),
         rounds = rounds?.toInt(),
         pauseBetweenRoundsSeconds = pauseBetweenRoundsSeconds?.toInt(),
         pauseBetweenSetsSeconds = pauseBetweenSetsSeconds?.toInt(),

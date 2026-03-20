@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS Exercise (
     thumbnailUrl  TEXT,
     exerciseType  TEXT,
     isCustom      INTEGER NOT NULL DEFAULT 0,
+    isDeleted  INTEGER NOT NULL DEFAULT 0,
+    isFavorite INTEGER NOT NULL DEFAULT 0,
     cachedAt      INTEGER NOT NULL
 );
 
@@ -46,7 +48,7 @@ getOldestCachedAt:
 SELECT MIN(cachedAt) FROM Exercise WHERE isCustom = 0;
 
 getAllExercises:
-SELECT * FROM Exercise ORDER BY nameEn ASC;
+SELECT * FROM Exercise WHERE isDeleted = 0 ORDER BY nameEn ASC;
 
 getExerciseById:
 SELECT * FROM Exercise WHERE id = :id;
@@ -59,7 +61,8 @@ SELECT * FROM ExerciseEquipment WHERE exerciseId = :exerciseId;
 
 searchExercises:
 SELECT DISTINCT e.* FROM Exercise e
-WHERE (
+WHERE e.isDeleted = 0
+AND (
     :query = '' OR
     LOWER(e.nameEn) LIKE '%' || LOWER(:query) || '%' OR
     LOWER(COALESCE(e.nameDe, '')) LIKE '%' || LOWER(:query) || '%'
@@ -69,20 +72,20 @@ ORDER BY e.nameEn ASC;
 getExercisesByMuscle:
 SELECT DISTINCT e.* FROM Exercise e
 INNER JOIN ExerciseMuscle em ON e.id = em.exerciseId
-WHERE em.muscle = :muscle
+WHERE em.muscle = :muscle AND e.isDeleted = 0
 ORDER BY e.nameEn ASC;
 
 getExercisesByEquipment:
 SELECT DISTINCT e.* FROM Exercise e
 INNER JOIN ExerciseEquipment eq ON e.id = eq.exerciseId
-WHERE eq.equipment = :equipment
+WHERE eq.equipment = :equipment AND e.isDeleted = 0
 ORDER BY e.nameEn ASC;
 
 getExercisesByMuscleAndEquipment:
 SELECT DISTINCT e.* FROM Exercise e
 INNER JOIN ExerciseMuscle em ON e.id = em.exerciseId
 INNER JOIN ExerciseEquipment eq ON e.id = eq.exerciseId
-WHERE em.muscle = :muscle AND eq.equipment = :equipment
+WHERE em.muscle = :muscle AND eq.equipment = :equipment AND e.isDeleted = 0
 ORDER BY e.nameEn ASC;
 
 upsertExercise:

@@ -14,11 +14,11 @@ CREATE TABLE IF NOT EXISTS SessionExercisePlan (
     id                        INTEGER PRIMARY KEY AUTOINCREMENT,
     sessionId                 INTEGER NOT NULL REFERENCES WorkoutSession(id) ON DELETE CASCADE,
     exerciseId                TEXT    NOT NULL,
-    exerciseNameSnapshot      TEXT    NOT NULL,
     position                  INTEGER NOT NULL,
     sets                      INTEGER,
     pauseAfterSetSeconds      INTEGER,
-    pauseAfterExerciseSeconds INTEGER
+    pauseAfterExerciseSeconds INTEGER,
+    skipped                   INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS SessionExerciseResult (
@@ -80,11 +80,17 @@ ORDER BY position ASC;
 
 insertSessionExercisePlan:
 INSERT INTO SessionExercisePlan
-    (sessionId, exerciseId, exerciseNameSnapshot, position,
+    (sessionId, exerciseId, position,
      sets, pauseAfterSetSeconds, pauseAfterExerciseSeconds)
 VALUES
-    (:sessionId, :exerciseId, :exerciseNameSnapshot, :position,
+    (:sessionId, :exerciseId, :position,
      :sets, :pauseAfterSetSeconds, :pauseAfterExerciseSeconds);
+
+skipExercise:
+UPDATE SessionExercisePlan SET skipped = 1 WHERE id = :id;
+
+reorderSessionExercises:
+UPDATE SessionExercisePlan SET position = :position WHERE id = :id;
 
 getResultsForSession:
 SELECT * FROM SessionExerciseResult
