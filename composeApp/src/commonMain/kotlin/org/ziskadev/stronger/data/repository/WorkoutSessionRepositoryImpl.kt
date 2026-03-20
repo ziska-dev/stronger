@@ -56,7 +56,7 @@ class WorkoutSessionRepositoryImpl(
     override fun getExercisePlansForSession(sessionId: Long): Flow<List<SessionExercisePlan>> =
         localDataSource.getExercisePlansForSession(sessionId)
 
-    override suspend fun saveExerciseResult(result: SessionExerciseResult) =
+    override suspend fun saveExerciseResult(result: SessionExerciseResult): Long =
         localDataSource.insertResult(result)
 
     override suspend fun updateExerciseResult(result: SessionExerciseResult) =

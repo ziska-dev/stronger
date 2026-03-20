@@ -1,9 +1,9 @@
 CREATE TABLE IF NOT EXISTS Exercise (
     id            TEXT PRIMARY KEY,
-    nameFr        TEXT,   -- aus App-Asset JSON
+    nameFr        TEXT,   -- Phase 2: populated from asset file
     nameEn        TEXT,
     nameDe        TEXT,   -- Primary (von API)
-    descriptionFr TEXT,
+    descriptionFr TEXT,   -- Phase 2: populated from asset file
     descriptionEn TEXT,
     descriptionDe TEXT,   -- Primary (von API)
     videoUrl      TEXT,
@@ -47,11 +47,21 @@ SELECT COUNT(*) FROM Exercise;
 getOldestCachedAt:
 SELECT MIN(cachedAt) FROM Exercise WHERE isCustom = 0;
 
-getAllExercises:
-SELECT * FROM Exercise WHERE isDeleted = 0 ORDER BY nameEn ASC;
-
 getExerciseById:
 SELECT * FROM Exercise WHERE id = :id;
+
+getAllExercisesWithDetails:
+SELECT
+    e.*,
+    GROUP_CONCAT(CASE WHEN em.isPrimary = 1 THEN em.muscle END) AS primaryMuscles,
+    GROUP_CONCAT(CASE WHEN em.isPrimary = 0 THEN em.muscle END) AS secondaryMuscles,
+    GROUP_CONCAT(DISTINCT eq.equipment)                          AS equipment
+FROM Exercise e
+LEFT JOIN ExerciseMuscle em ON e.id = em.exerciseId
+LEFT JOIN ExerciseEquipment eq ON e.id = eq.exerciseId
+WHERE e.isDeleted = 0
+GROUP BY e.id
+ORDER BY e.nameEn ASC;
 
 getMusclesForExercise:
 SELECT * FROM ExerciseMuscle WHERE exerciseId = :exerciseId;
@@ -59,42 +69,83 @@ SELECT * FROM ExerciseMuscle WHERE exerciseId = :exerciseId;
 getEquipmentForExercise:
 SELECT * FROM ExerciseEquipment WHERE exerciseId = :exerciseId;
 
-searchExercises:
-SELECT DISTINCT e.* FROM Exercise e
+searchExercisesWithDetails:
+SELECT
+    e.*,
+    GROUP_CONCAT(CASE WHEN em.isPrimary = 1 THEN em.muscle END) AS primaryMuscles,
+    GROUP_CONCAT(CASE WHEN em.isPrimary = 0 THEN em.muscle END) AS secondaryMuscles,
+    GROUP_CONCAT(DISTINCT eq.equipment)                          AS equipment
+FROM Exercise e
+LEFT JOIN ExerciseMuscle em ON e.id = em.exerciseId
+LEFT JOIN ExerciseEquipment eq ON e.id = eq.exerciseId
 WHERE e.isDeleted = 0
-AND (
-    :query = '' OR
-    LOWER(e.nameEn) LIKE '%' || LOWER(:query) || '%' OR
-    LOWER(COALESCE(e.nameDe, '')) LIKE '%' || LOWER(:query) || '%'
-)
+  AND (:query = '' OR LOWER(e.nameEn) LIKE '%' || LOWER(:query) || '%'
+                   OR LOWER(COALESCE(e.nameDe, '')) LIKE '%' || LOWER(:query) || '%')
+GROUP BY e.id
 ORDER BY e.nameEn ASC;
 
-getExercisesByMuscle:
-SELECT DISTINCT e.* FROM Exercise e
-INNER JOIN ExerciseMuscle em ON e.id = em.exerciseId
-WHERE em.muscle = :muscle AND e.isDeleted = 0
+getExercisesByMuscleWithDetails:
+SELECT
+    e.*,
+    GROUP_CONCAT(CASE WHEN em2.isPrimary = 1 THEN em2.muscle END) AS primaryMuscles,
+    GROUP_CONCAT(CASE WHEN em2.isPrimary = 0 THEN em2.muscle END) AS secondaryMuscles,
+    GROUP_CONCAT(DISTINCT eq.equipment)                            AS equipment
+FROM Exercise e
+INNER JOIN ExerciseMuscle em ON e.id = em.exerciseId AND em.muscle = :muscle
+LEFT JOIN ExerciseMuscle em2 ON e.id = em2.exerciseId
+LEFT JOIN ExerciseEquipment eq ON e.id = eq.exerciseId
+WHERE e.isDeleted = 0
+GROUP BY e.id
 ORDER BY e.nameEn ASC;
 
-getExercisesByEquipment:
-SELECT DISTINCT e.* FROM Exercise e
-INNER JOIN ExerciseEquipment eq ON e.id = eq.exerciseId
-WHERE eq.equipment = :equipment AND e.isDeleted = 0
+getExercisesByEquipmentWithDetails:
+SELECT
+    e.*,
+    GROUP_CONCAT(CASE WHEN em.isPrimary = 1 THEN em.muscle END) AS primaryMuscles,
+    GROUP_CONCAT(CASE WHEN em.isPrimary = 0 THEN em.muscle END) AS secondaryMuscles,
+    GROUP_CONCAT(DISTINCT eq.equipment)                          AS equipment
+FROM Exercise e
+INNER JOIN ExerciseEquipment eq2 ON e.id = eq2.exerciseId AND eq2.equipment = :equipment
+LEFT JOIN ExerciseMuscle em ON e.id = em.exerciseId
+LEFT JOIN ExerciseEquipment eq ON e.id = eq.exerciseId
+WHERE e.isDeleted = 0
+GROUP BY e.id
 ORDER BY e.nameEn ASC;
 
-getExercisesByMuscleAndEquipment:
-SELECT DISTINCT e.* FROM Exercise e
-INNER JOIN ExerciseMuscle em ON e.id = em.exerciseId
-INNER JOIN ExerciseEquipment eq ON e.id = eq.exerciseId
-WHERE em.muscle = :muscle AND eq.equipment = :equipment AND e.isDeleted = 0
+getExercisesByMuscleAndEquipmentWithDetails:
+SELECT
+    e.*,
+    GROUP_CONCAT(CASE WHEN em2.isPrimary = 1 THEN em2.muscle END) AS primaryMuscles,
+    GROUP_CONCAT(CASE WHEN em2.isPrimary = 0 THEN em2.muscle END) AS secondaryMuscles,
+    GROUP_CONCAT(DISTINCT eq2.equipment)                           AS equipment
+FROM Exercise e
+INNER JOIN ExerciseMuscle em ON e.id = em.exerciseId AND em.muscle = :muscle
+INNER JOIN ExerciseEquipment eq ON e.id = eq.exerciseId AND eq.equipment = :equipment
+LEFT JOIN ExerciseMuscle em2 ON e.id = em2.exerciseId
+LEFT JOIN ExerciseEquipment eq2 ON e.id = eq2.exerciseId
+WHERE e.isDeleted = 0
+GROUP BY e.id
 ORDER BY e.nameEn ASC;
 
 upsertExercise:
-INSERT OR REPLACE INTO Exercise
+INSERT OR IGNORE INTO Exercise
     (id, nameEn, nameDe, descriptionEn, descriptionDe,
      videoUrl, thumbnailUrl, exerciseType, isCustom, cachedAt)
 VALUES
     (:id, :nameEn, :nameDe, :descriptionEn, :descriptionDe,
      :videoUrl, :thumbnailUrl, :exerciseType, :isCustom, :cachedAt);
+
+updateExerciseData:
+UPDATE Exercise
+SET nameEn        = :nameEn,
+    nameDe        = :nameDe,
+    descriptionEn = :descriptionEn,
+    descriptionDe = :descriptionDe,
+    videoUrl      = :videoUrl,
+    thumbnailUrl  = :thumbnailUrl,
+    exerciseType  = :exerciseType,
+    cachedAt      = :cachedAt
+WHERE id = :id;
 
 insertMuscle:
 INSERT OR IGNORE INTO ExerciseMuscle (exerciseId, muscle, isPrimary)
@@ -122,5 +173,15 @@ UPDATE Exercise SET isDeleted = 1 WHERE id = :id;
 toggleFavorite:
 UPDATE Exercise SET isFavorite = :isFavorite WHERE id = :id;
 
-getFavoriteExercises:
-SELECT * FROM Exercise WHERE isFavorite = 1 AND isDeleted = 0 ORDER BY nameEn ASC;
+getFavoriteExercisesWithDetails:
+SELECT
+    e.*,
+    GROUP_CONCAT(CASE WHEN em.isPrimary = 1 THEN em.muscle END) AS primaryMuscles,
+    GROUP_CONCAT(CASE WHEN em.isPrimary = 0 THEN em.muscle END) AS secondaryMuscles,
+    GROUP_CONCAT(DISTINCT eq.equipment)                          AS equipment
+FROM Exercise e
+LEFT JOIN ExerciseMuscle em ON e.id = em.exerciseId
+LEFT JOIN ExerciseEquipment eq ON e.id = eq.exerciseId
+WHERE e.isFavorite = 1 AND e.isDeleted = 0
+GROUP BY e.id
+ORDER BY e.nameEn ASC;

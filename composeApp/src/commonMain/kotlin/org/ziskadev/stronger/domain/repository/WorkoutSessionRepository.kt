@@ -32,7 +32,7 @@ interface WorkoutSessionRepository {
     fun getExercisePlansForSession(sessionId: Long): Flow<List<SessionExercisePlan>>
 
     /** Saves a set result. Creates or updates depending on whether id == 0L. */
-    suspend fun saveExerciseResult(result: SessionExerciseResult)
+    suspend fun saveExerciseResult(result: SessionExerciseResult): Long
 
     /** Updates an existing result (e.g. user corrects reps after the set). */
     suspend fun updateExerciseResult(result: SessionExerciseResult)

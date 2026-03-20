@@ -78,7 +78,7 @@ class WorkoutSessionLocalDataSource(private val db: StrongerDatabase) {
             .mapToList(Dispatchers.IO)
             .map { rows -> rows.map { it.toDomain() } }
 
-    suspend fun insertResult(result: SessionExerciseResult): Unit =
+    suspend fun insertResult(result: SessionExerciseResult): Long =
         withContext(Dispatchers.IO) {
             db.workoutSessionQueries.insertResult(
                 sessionId = result.sessionId,
@@ -92,6 +92,7 @@ class WorkoutSessionLocalDataSource(private val db: StrongerDatabase) {
                 startedAt = result.startedAt,
                 completedAt = result.completedAt,
             )
+            db.workoutSessionQueries.lastInsertRowId().executeAsOne()
         }
 
     suspend fun updateResultCompleted(result: SessionExerciseResult): Unit =

@@ -8,7 +8,6 @@ import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import org.ziskadev.stronger.data.local.Exercise as ExerciseEntity
 import org.ziskadev.stronger.domain.model.Exercise
 
 /**
@@ -25,51 +24,76 @@ class ExerciseLocalDataSource(private val db: StrongerDatabase) {
 
     fun getAllExercises(): Flow<List<Exercise>> =
         db.exerciseQueries
-            .getAllExercises()
+            .getAllExercisesWithDetails()
             .asFlow()
             .mapToList(Dispatchers.IO)
-            .map { rows -> rows.map { it.toDomain() } }
+            .map { rows -> rows.map { row ->
+                mapRowToExercise(row.id, row.nameDe, row.nameEn, row.descriptionDe,
+                    row.descriptionEn, row.videoUrl, row.thumbnailUrl, row.exerciseType,
+                    row.isCustom, row.primaryMuscles, row.secondaryMuscles, row.equipment)
+            }}
 
     fun searchExercises(query: String): Flow<List<Exercise>> =
         db.exerciseQueries
-            .searchExercises(query)
+            .searchExercisesWithDetails(query)
             .asFlow()
             .mapToList(Dispatchers.IO)
-            .map { rows -> rows.map { it.toDomain() } }
+            .map { rows -> rows.map { row ->
+                mapRowToExercise(row.id, row.nameDe, row.nameEn, row.descriptionDe,
+                    row.descriptionEn, row.videoUrl, row.thumbnailUrl, row.exerciseType,
+                    row.isCustom, row.primaryMuscles, row.secondaryMuscles, row.equipment)
+            }}
 
     fun getExercisesByMuscle(muscle: String): Flow<List<Exercise>> =
         db.exerciseQueries
-            .getExercisesByMuscle(muscle)
+            .getExercisesByMuscleWithDetails(muscle)
             .asFlow()
             .mapToList(Dispatchers.IO)
-            .map { rows -> rows.map { it.toDomain() } }
+            .map { rows -> rows.map { row ->
+                mapRowToExercise(row.id, row.nameDe, row.nameEn, row.descriptionDe,
+                    row.descriptionEn, row.videoUrl, row.thumbnailUrl, row.exerciseType,
+                    row.isCustom, row.primaryMuscles, row.secondaryMuscles, row.equipment)
+            }}
 
     fun getExercisesByEquipment(equipment: String): Flow<List<Exercise>> =
         db.exerciseQueries
-            .getExercisesByEquipment(equipment)
+            .getExercisesByEquipmentWithDetails(equipment)
             .asFlow()
             .mapToList(Dispatchers.IO)
-            .map { rows -> rows.map { it.toDomain() } }
+            .map { rows -> rows.map { row ->
+                mapRowToExercise(row.id, row.nameDe, row.nameEn, row.descriptionDe,
+                    row.descriptionEn, row.videoUrl, row.thumbnailUrl, row.exerciseType,
+                    row.isCustom, row.primaryMuscles, row.secondaryMuscles, row.equipment)
+            }}
 
     fun getExercisesByMuscleAndEquipment(muscle: String, equipment: String): Flow<List<Exercise>> =
         db.exerciseQueries
-            .getExercisesByMuscleAndEquipment(muscle, equipment)
+            .getExercisesByMuscleAndEquipmentWithDetails(muscle, equipment)
             .asFlow()
             .mapToList(Dispatchers.IO)
-            .map { rows -> rows.map { it.toDomain() } }
+            .map { rows -> rows.map { row ->
+                mapRowToExercise(row.id, row.nameDe, row.nameEn, row.descriptionDe,
+                    row.descriptionEn, row.videoUrl, row.thumbnailUrl, row.exerciseType,
+                    row.isCustom, row.primaryMuscles, row.secondaryMuscles, row.equipment)
+            }}
+
+    fun getFavoriteExercises(): Flow<List<Exercise>> =
+        db.exerciseQueries
+            .getFavoriteExercisesWithDetails()
+            .asFlow()
+            .mapToList(Dispatchers.IO)
+            .map { rows -> rows.map { row ->
+                mapRowToExercise(row.id, row.nameDe, row.nameEn, row.descriptionDe,
+                    row.descriptionEn, row.videoUrl, row.thumbnailUrl, row.exerciseType,
+                    row.isCustom, row.primaryMuscles, row.secondaryMuscles, row.equipment)
+            }}
 
     suspend fun softDeleteExercise(exerciseId: String): Unit =
         withContext(Dispatchers.IO) {
             db.exerciseQueries.softDeleteExercise(exerciseId)
         }
 
-    fun getFavoriteExercises(): Flow<List<Exercise>> =
-        db.exerciseQueries
-            .getFavoriteExercises()
-            .asFlow()
-            .mapToList(Dispatchers.IO)
-            .map { rows -> rows.map { it.toDomain() } }
-
+    /** Toggles favorite status; not affected by sync due to upsert strategy. */
     suspend fun toggleFavorite(exerciseId: String, isFavorite: Boolean): Unit =
         withContext(Dispatchers.IO) {
             db.exerciseQueries.toggleFavorite(
@@ -87,6 +111,7 @@ class ExerciseLocalDataSource(private val db: StrongerDatabase) {
     suspend fun upsertExercise(exercise: Exercise, cachedAt: Long): Unit =
         withContext(Dispatchers.IO) {
             db.transaction {
+                // Insert if not exists (preserves isDeleted + isFavorite for existing rows)
                 db.exerciseQueries.upsertExercise(
                     id = exercise.id,
                     nameEn = exercise.nameEn,
@@ -97,6 +122,18 @@ class ExerciseLocalDataSource(private val db: StrongerDatabase) {
                     thumbnailUrl = exercise.thumbnailUrl,
                     exerciseType = exercise.exerciseType,
                     isCustom = if (exercise.isCustom) 1L else 0L,
+                    cachedAt = cachedAt,
+                )
+                // Update data fields for existing rows (leaves isDeleted + isFavorite untouched)
+                db.exerciseQueries.updateExerciseData(
+                    id = exercise.id,
+                    nameEn = exercise.nameEn,
+                    nameDe = exercise.nameDe,
+                    descriptionEn = exercise.descriptionEn,
+                    descriptionDe = exercise.descriptionDe,
+                    videoUrl = exercise.videoUrl,
+                    thumbnailUrl = exercise.thumbnailUrl,
+                    exerciseType = exercise.exerciseType,
                     cachedAt = cachedAt,
                 )
                 // Delete and reinsert muscles and equipment to stay in sync with backend
@@ -115,26 +152,32 @@ class ExerciseLocalDataSource(private val db: StrongerDatabase) {
             }
         }
 
-    /** Maps a DB row to domain model. Fetches muscles and equipment synchronously within IO context.
-     * Note: executes 2 additional queries per exercise (muscles + equipment).
-     * Acceptable for Phase 1, but may need optimization (e.g. JOIN query) if list performance degrades.
-     * */
-    private fun ExerciseEntity.toDomain(): Exercise {
-        val muscles = db.exerciseQueries.getMusclesForExercise(id).executeAsList()
-        val equipmentList = db.exerciseQueries.getEquipmentForExercise(id).executeAsList()
-        return Exercise(
-            id = id,
-            nameDe = nameDe,
-            nameEn = nameEn,
-            descriptionDe = descriptionDe,
-            descriptionEn = descriptionEn,
-            videoUrl = videoUrl,
-            thumbnailUrl = thumbnailUrl,
-            exerciseType = exerciseType,
-            isCustom = isCustom == 1L,
-            primaryMuscles = muscles.filter { it.isPrimary == 1L }.map { it.muscle },
-            secondaryMuscles = muscles.filter { it.isPrimary == 0L }.map { it.muscle },
-            equipment = equipmentList.map { it.equipment },
-        )
-    }
+    /** Maps JOIN query result fields to domain model; shared across all exercise list queries. */
+    private fun mapRowToExercise(
+        id: String,
+        nameDe: String?,
+        nameEn: String?,
+        descriptionDe: String?,
+        descriptionEn: String?,
+        videoUrl: String?,
+        thumbnailUrl: String?,
+        exerciseType: String?,
+        isCustom: Long,
+        primaryMuscles: String?,
+        secondaryMuscles: String?,
+        equipment: String?,
+    ): Exercise = Exercise(
+        id = id,
+        nameDe = nameDe,
+        nameEn = nameEn,
+        descriptionDe = descriptionDe,
+        descriptionEn = descriptionEn,
+        videoUrl = videoUrl,
+        thumbnailUrl = thumbnailUrl,
+        exerciseType = exerciseType,
+        isCustom = isCustom == 1L,
+        primaryMuscles = primaryMuscles?.split(",")?.filter { it.isNotBlank() } ?: emptyList(),
+        secondaryMuscles = secondaryMuscles?.split(",")?.filter { it.isNotBlank() } ?: emptyList(),
+        equipment = equipment?.split(",")?.filter { it.isNotBlank() } ?: emptyList(),
+    )
 }
